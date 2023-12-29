@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Editor</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .editor-container {
+            display: flex;
+        }
+
+        .editor-left {
+            flex: 1;
+            padding: 20px;
+            position: relative;
+        }
+
+        .editor-left .movable-text {
+            position: absolute;
+            cursor: grab;
+            border: 1px solid #ccc;
+            padding: 4px;
+            background-color: #fff;
+            border-radius: 4px;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .editor-left .movable-text.selected {
+            background-color: #ffeeba;
+            border: 1px solid #ffc107;
+        }
+
+        .editor-right {
+            width: 300px;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-200 h-screen p-4">
+
+    <div class="editor-container">
+        <div class="editor-left bg-white rounded-lg shadow-md"></div>
+        <div class="editor-right ml-4">
+            <div class="mb-4">
+                <label for="fontStyle" class="block text-gray-700 font-bold mb-2">Font Style</label>
+                <select id="fontStyle" class="border border-gray-300 p-2 rounded-md">
+                    <option>Arial</option>
+                    <option>Times New Roman</option>
+                    <option>Cambria</option>
+                    <option>Arial Narrow</option>
+                    <option>Verdana</option>
+                    <option>Georgia</option>
+                    <option>Tahoma</option>
+                    <option>Palatino Linotype</option>
+                    <option>Courier New</option>
+                    <option>Impact</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label for="fontColor" class="block text-gray-700 font-bold mb-2">Font Color</label>
+                <input type="color" id="fontColor" class="border border-gray-300 p-2 rounded-md">
+            </div>
+            <div class="mb-4">
+                <label for="fontSize" class="block text-gray-700 font-bold mb-2">Font Size</label>
+                <select id="fontSize" class="border border-gray-300 p-2 rounded-md">
+                    <option>12</option>
+                    <option>14</option>
+                    <option>16</option>
+                    <option>18</option>
+                    <option>20</option>
+                    <option>22</option>
+                    <option>24</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <button id="undoBtn" class="bg-blue-500 text-white p-2 rounded-md">Undo</button>
+                <button id="redoBtn" class="bg-green-500 text-white p-2 rounded-md ml-2">Redo</button>
+            </div>
+
+            <div class="mb-4">
+                <label for="textInput" class="block text-gray-700 font-bold mb-2">Input Text</label>
+                <input type="text" id="textInput" class="border border-gray-300 p-2 rounded-md">
+            </div>
+            <div>
+                <button id="submitBtn" class="bg-indigo-500 text-white p-2 rounded-md">Submit</button>
+                <button id="removeBtn" class="bg-red-500 text-white p-2 rounded-md ml-2">Remove Text</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setupTextEditor() {
+            const editorLeft = document.querySelector('.editor-left');
+            const fontStyleSelect = document.getElementById('fontStyle');
+            const fontColorInput = document.getElementById('fontColor');
+            const fontSizeSelect = document.getElementById('fontSize');
+            const undoBtn = document.getElementById('undoBtn');
+            const redoBtn = document.getElementById('redoBtn');
+            const textInput = document.getElementById('textInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const removeBtn = document.getElementById('removeBtn');
+
+            let history = [];
+            let historyIndex = -1;
+            let selectedText = null;
+
+            function updateDisplay() {
+                editorLeft.innerHTML = history[historyIndex] || '';
+            }
+
+            function addToHistory() {
+                history = history.slice(0, historyIndex + 1).concat(editorLeft.innerHTML);
+                historyIndex = history.length - 1;
+            }
+
+            function undo() {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    updateDisplay();
+                }
+            }
+
+            function redo() {
+                if (historyIndex < history.length - 1) {
+                    historyIndex++;
+                    updateDisplay();
+                }
+            }
+
+            function createMovableText(word) {
+                const movableText = document.createElement('div');
+                movableText.className = 'movable-text';
+                movableText.innerText = word;
+                editorLeft.appendChild(movableText);
+
+                movableText.addEventListener('mousedown', () => {
+                    selectedText = movableText;
+                    selectedText.classList.add('selected');
+                });
+
+                let isDragging = false;
+                let offsetX, offsetY;
+
+                movableText.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    offsetX = e.clientX - movableText.getBoundingClientRect().left;
+                    offsetY = e.clientY - movableText.getBoundingClientRect().top;
+
+                    movableText.style.cursor = 'grabbing';
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (isDragging && selectedText === movableText) {
+                        const x = e.clientX - offsetX;
+                        const y = e.clientY - offsetY;
+
+                        movableText.style.left = x + 'px';
+                        movableText.style.top = y + 'px';
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                    movableText.style.cursor = 'grab';
+                });
+            }
+
+            function removeSelectedText() {
+                if (selectedText) {
+                    editorLeft.removeChild(selectedText);
+                    addToHistory();
+                    selectedText = null;
+                }
+            }
+
+            function clearTextInput() {
+                textInput.value = '';
+            }
+
+            fontStyleSelect.addEventListener('change', () => {
+                editorLeft.style.fontFamily = fontStyleSelect.value;
+                addToHistory();
+            });
+
+            fontColorInput.addEventListener('input', () => {
+                editorLeft.style.color = fontColorInput.value;
+                addToHistory();
+            });
+
+            fontSizeSelect.addEventListener('change', () => {
+                editorLeft.style.fontSize = fontSizeSelect.value + 'px';
+                addToHistory();
+            });
+
+            undoBtn.addEventListener('click', undo);
+            redoBtn.addEventListener('click', redo);
+
+            submitBtn.addEventListener('click', () => {
+                createMovableText(textInput.value);
+                addToHistory();
+                clearTextInput();
+            });
+
+            removeBtn.addEventListener('click', removeSelectedText);
+        }
+
+        document.addEventListener("DOMContentLoaded", setupTextEditor);
+
+    </script>
+
+</body>
+
+</html>
